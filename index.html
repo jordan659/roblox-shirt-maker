@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Roblox Shirt Maker</title>
+  <style>
+    body { text-align: center; font-family: sans-serif; }
+    canvas { border: 1px solid #ccc; background: url('shirt-template.png') no-repeat; background-size: contain; }
+  </style>
+</head>
+<body>
+  <h1>Roblox Shirt Maker</h1>
+  <canvas id="shirtCanvas" width="585" height="559"></canvas><br>
+  <input type="color" id="colorPicker" value="#ff0000">
+  <button onclick="drawRect()">Draw Rectangle</button>
+  <button onclick="downloadImage()">Download Shirt</button>
+
+  <script>
+    const canvas = document.getElementById('shirtCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function drawRect() {
+      ctx.fillStyle = document.getElementById('colorPicker').value;
+      ctx.fillRect(100, 100, 100, 100); // Change coords as needed
+    }
+
+    function downloadImage() {
+      const link = document.createElement('a');
+      link.download = 'roblox-shirt.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    }
+  </script>
+</body>
+</html>
