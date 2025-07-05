@@ -1,29 +1,119 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Roblox Shirt Maker</title>
+  <meta charset="UTF-8">
+  <title>Roblox Shirt Pro Editor</title>
   <style>
-    body { text-align: center; font-family: sans-serif; }
-    canvas { border: 1px solid #ccc; background: url('shirt-template.png') no-repeat; background-size: contain; }
+    body { font-family: sans-serif; background: #f5f5f5; text-align: center; }
+    .toolbar { margin: 10px; }
+    canvas { border: 1px solid #ccc; cursor: move; background: url('shirt-template.png') no-repeat center; background-size: cover; }
+    .btn, input[type="color"], input[type="file"] {
+      margin: 5px; padding: 10px; border: none; border-radius: 5px;
+    }
+    #canvasWrapper { position: relative; display: inline-block; }
+    .layer {
+      position: absolute;
+      cursor: move;
+      user-select: none;
+    }
   </style>
 </head>
 <body>
-  <h1>Roblox Shirt Maker</h1>
-  <canvas id="shirtCanvas" width="585" height="559"></canvas><br>
-  <input type="color" id="colorPicker" value="#ff0000">
-  <button onclick="drawRect()">Draw Rectangle</button>
-  <button onclick="downloadImage()">Download Shirt</button>
+  <h1>Roblox Shirt Pro Editor</h1>
+
+  <div class="toolbar">
+    <input type="file" id="imgUpload" accept="image/*" class="btn">
+    <input type="text" id="textInput" placeholder="Enter text" class="btn">
+    <input type="color" id="textColor" class="btn">
+    <button onclick="addText()" class="btn">Add Text</button>
+    <button onclick="downloadCanvas()" class="btn">Download</button>
+  </div>
+
+  <div id="canvasWrapper">
+    <canvas id="mainCanvas" width="585" height="559"></canvas>
+  </div>
 
   <script>
-    const canvas = document.getElementById('shirtCanvas');
+    const canvas = document.getElementById('mainCanvas');
     const ctx = canvas.getContext('2d');
+    const layers = [];
 
-    function drawRect() {
-      ctx.fillStyle = document.getElementById('colorPicker').value;
-      ctx.fillRect(100, 100, 100, 100); // Change coords as needed
+    const template = new Image();
+    template.src = 'shirt-template.png';
+    template.onload = () => drawAll();
+
+    function drawAll() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(template, 0, 0, canvas.width, canvas.height);
+      for (let layer of layers) {
+        if (layer.type === 'image') ctx.drawImage(layer.img, layer.x, layer.y, layer.w, layer.h);
+        else if (layer.type === 'text') {
+          ctx.fillStyle = layer.color;
+          ctx.font = layer.size + "px Arial";
+          ctx.fillText(layer.text, layer.x, layer.y);
+        }
+      }
     }
 
-    function downloadImage() {
+    function addText() {
+      const text = document.getElementById("textInput").value;
+      const color = document.getElementById("textColor").value;
+      if (!text) return;
+      layers.push({ type: "text", text, x: 100, y: 100, size: 24, color });
+      drawAll();
+    }
+
+    document.getElementById('imgUpload').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const img = new Image();
+        img.onload = function() {
+          layers.push({ type: 'image', img, x: 50, y: 50, w: 100, h: 100 });
+          drawAll();
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    canvas.addEventListener('mousedown', startDrag);
+    let dragItem = null, offsetX, offsetY;
+
+    function startDrag(e) {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left, y = e.clientY - rect.top;
+      for (let i = layers.length - 1; i >= 0; i--) {
+        const item = layers[i];
+        if (item.type === 'image' &&
+            x >= item.x && x <= item.x + item.w &&
+            y >= item.y && y <= item.y + item.h) {
+          dragItem = item; offsetX = x - item.x; offsetY = y - item.y; return;
+        }
+        if (item.type === 'text') {
+          ctx.font = item.size + "px Arial";
+          const width = ctx.measureText(item.text).width;
+          if (x >= item.x && x <= item.x + width &&
+              y <= item.y && y >= item.y - item.size) {
+            dragItem = item; offsetX = x - item.x; offsetY = y - item.y; return;
+          }
+        }
+      }
+    }
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!dragItem) return;
+      const rect = canvas.getBoundingClientRect();
+      dragItem.x = e.clientX - rect.left - offsetX;
+      dragItem.y = e.clientY - rect.top - offsetY;
+      drawAll();
+    });
+
+    canvas.addEventListener('mouseup', () => dragItem = null);
+
+    function downloadCanvas() {
       const link = document.createElement('a');
       link.download = 'roblox-shirt.png';
       link.href = canvas.toDataURL();
